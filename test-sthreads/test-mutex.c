@@ -23,7 +23,7 @@ void *thread_start(void *);
 
 int main(int argc, char **argv)
 {
-	int checks;
+	int checks,priority;
 	
 	printf("Testing sthread_mutex_*, impl: %s\n",
 		   (sthread_get_impl() == STHREAD_PTHREAD_IMPL) ? "pthread" : "user");
@@ -33,7 +33,9 @@ int main(int argc, char **argv)
 	mutex = sthread_mutex_init();
 	sthread_mutex_lock(mutex);
 	
-	if (sthread_create(thread_start, (void*)1) == NULL) {
+	printf("Enter a priority");
+	scanf("%d",&priority);
+	if (sthread_create(thread_start, (void*)1,priority) == NULL) {
 		printf("sthread_create failed\n");
 		exit(1);
 	}

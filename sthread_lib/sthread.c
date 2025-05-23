@@ -25,11 +25,13 @@ void sthread_init(void) {
   IMPL_CHOOSE(sthread_pthread_init(), sthread_user_init());
 }
 
-sthread_t sthread_create(sthread_start_func_t start_routine, void *arg) {
+sthread_t sthread_create(sthread_start_func_t start_routine, void *arg, int priority) {
   sthread_t newth;
-  IMPL_CHOOSE(newth = sthread_pthread_create(start_routine, arg),
-	      newth = sthread_user_create(start_routine, arg,priority));
-  return newth;
+IMPL_CHOOSE(
+  newth = sthread_pthread_create(start_routine, arg),
+  newth = sthread_user_create(start_routine, arg, priority)
+);
+return newth;
 }
 
 void sthread_exit(void *ret) {

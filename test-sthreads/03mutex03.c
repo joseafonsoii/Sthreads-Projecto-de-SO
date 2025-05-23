@@ -32,8 +32,9 @@ int main(int argc, char **argv) {
 	sthread_init();
 	
 	mutex = sthread_mutex_init();
+	int priority=4;
 	
-	if (sthread_create(thread_start, (void*)&arg) == NULL) {
+	if (sthread_create(thread_start, (void*)&arg,priority) == NULL) {
 		printf("sthread_create failed\n");
 		exit(1);
 	}

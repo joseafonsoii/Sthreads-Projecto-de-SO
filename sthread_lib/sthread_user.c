@@ -53,7 +53,6 @@ static queue_t *sleep_thr_list;
 static queue_t *join_thr_list;
 static queue_t *zombie_thr_list;
 static struct _sthread *active_thr;   /* thread activa */
-static struct _sthread *expired_thr;   /* thread expirada */
 static int tid_gen;                   /* gerador de tid's */
 
 
@@ -74,7 +73,7 @@ typedef struct {
 
 // Runqueue completa (15 filas: 0–14)
 typedef struct {
-    sthread_queue_t queue[MAX_PRIORIDADES];
+    sthread_queue_t fila[MAX_PRIORIDADES];
 } sthread_runqueue_t;
 
 // Escalonador global (ativas + expiradas)
@@ -82,7 +81,15 @@ static sthread_runqueue_t *active_rq;
 static sthread_runqueue_t *expired_rq;
 
 
-
+void insert_in_runquee(sthread_queue_t *fila, struct _sthread *thread) {
+    thread->next = NULL;
+    if (fila->tail) {
+        fila->tail->next = thread;
+        fila->tail = thread;
+    } else {
+        fila->head = fila->tail = thread;
+    }
+}
 
 void sthread_user_free(struct _sthread *thread);
 
@@ -111,6 +118,13 @@ void sthread_user_init(void) {
   main_thread->join_tid = 0;
   main_thread->join_ret = NULL;
   main_thread->tid = tid_gen++;
+
+   active_rq = malloc(sizeof(sthread_runqueue_t));
+   expired_rq = malloc(sizeof(sthread_runqueue_t));
+   for (int i = 0; i < MAX_PRIORIDADES; i++) {
+    active_rq->fila[i].head = active_rq->fila[i].tail = NULL;
+    expired_rq->fila[i].head = expired_rq->fila[i].tail = NULL;
+}
   
   active_thr = main_thread;
 
@@ -119,70 +133,128 @@ void sthread_user_init(void) {
 }
 
 
-sthread_t sthread_user_create(sthread_start_func_t start_routine, void *arg,int priority)
-{
-
-   if (priority < 0 || priority >= MAX_PRIORIDADES) {
-        fprintf(stderr, "Invalid priority: %d\n make sure it isn't less than 0 or higher-equal to 15", priority);
+sthread_t sthread_user_create(sthread_start_func_t start_routine, void *arg, int priority) {
+    // Validação da prioridade
+    if (priority < 0 || priority >= MAX_PRIORIDADES) {
+        fprintf(stderr, "Invalid priority: %d (must be between 0 and %d)\n", 
+                priority, MAX_PRIORIDADES - 1);
         return NULL;
     }
 
-  struct _sthread *new_thread = (struct _sthread*)malloc(sizeof(struct _sthread));
-  sthread_ctx_start_func_t func = sthread_aux_start;
+    // Aloca e inicializa a nova thread
+    struct _sthread *new_thread = malloc(sizeof(struct _sthread));
+    if (!new_thread) {
+        perror("malloc error");
+        return NULL;
+    }
 
-  new_thread->args = arg;
-  new_thread->start_routine_ptr = start_routine;
-  new_thread->wake_time = 0;
-  new_thread->join_tid = 0;
-  new_thread->join_ret = NULL;
-  new_thread->saved_ctx = sthread_new_ctx(func);
+    // Contexto de arranque (primeiro contexto que chama sthread_aux_start)
+    sthread_ctx_start_func_t func = sthread_aux_start;
+    new_thread->saved_ctx = sthread_new_ctx(func);
 
-  new_thread->priority = priority;
-  new_thread->quantum =QUANTUM_BASE;
+    // Preenche os campos herdados
+    new_thread->start_routine_ptr = start_routine;
+    new_thread->args             = arg;
+    new_thread->wake_time        = 0;
+    new_thread->join_tid         = 0;
+    new_thread->join_ret         = NULL;
 
+    // Atribui o TID
+    new_thread->tid = tid_gen++;
 
-  
-  splx(HIGH);
-  new_thread->tid = tid_gen++;
-  queue_insert(exe_thr_list, new_thread);
-  splx(LOW);
-  return new_thread;
+    // >>> Preenche os campos do novo escalonador
+    new_thread->prioridade_base  = priority;
+    new_thread->prioridade_atual = priority;
+    new_thread->nice             = 0;
+    new_thread->quantum          = QUANTUM_BASE;
+    new_thread->prioridade_fixa  = (priority <= PRIORIDADE_FIXA) ? 1 : 0;
+    new_thread->next             = NULL;
+
+    // Insere na runqueue ativa correspondente
+    // (assumindo que active_rq já foi inicializado em sthread_user_init)
+    insert_in_runquee(&active_rq->fila[priority], new_thread);
+
+    return new_thread;
 }
+
 
 int sthread_nice(int new_nice){
-
-   /*Verificando se o nice e valido ja que o valor de nice deve estar entre 0 a 10*/
    if(new_nice < 0 || new_nice > 10){
-      fprintf(stderr,"ERROR:Nice value(%d) invalid.The nice value should be between 0 and 10",new_nice);
-      return -1; 
+      fprintf(stderr,"ERROR:Nice value(%d) invalid. The nice value should be between 0 and 10\n", new_nice);
+      return -1;
    }
 
+   struct _sthread *t = active_thr;
 
+   if (t->prioridade_fixa) {
+       return t->prioridade_atual;
+   }
+
+   t->nice = new_nice;
+
+   int nova_prioridade = t->prioridade_base + t->nice;
+
+   if (nova_prioridade < 5) nova_prioridade = 5;
+   if (nova_prioridade > 14) nova_prioridade = 14;
+
+   return nova_prioridade;
 }
 
-void sthread_dump(){
-   printf("=== dump start ===\n");
 
-   printf("active runquee\n");
+void sthread_user_dump() {
+    printf("=== dump start ===\n");
 
-   printf("expired runquee\n");
-
-   printf("blocked list\n");
-
-   printf("=== dump end ===");
-   
-}
-
-
-void insert_in_runquee(sthread_queue_t *fila, struct _sthread *thread) {
-    thread->next = NULL;
-    if (queue->tail) {
-        queue->tail->next = thread;
-        queue->tail = thread;
-    } else {
-        queue->head = queue->tail = thread;
+    // Thread ativa
+    if (active_thr != NULL) {
+        printf("active thread\n");
+        printf("id: %d\n", active_thr->tid);
+        printf("priority: %d\n", active_thr->prioridade_atual);
+        printf("quantum: %d\n", active_thr->quantum);
     }
+
+    // Runqueue ativa
+    printf("active runqueue\n");
+    for (int i = 0; i < MAX_PRIORIDADES; i++) {
+        printf("[%d]", i);
+        struct _sthread *t = active_rq->fila[i].head;
+        while (t) {
+            printf(" %d,%d", t->tid, t->quantum);
+            t = t->next;
+        }
+        printf("\n");
+    }
+
+    // Runqueue expirada
+    printf("expired runqueue\n");
+    for (int i = 0; i < MAX_PRIORIDADES; i++) {
+        printf("[%d]", i);
+        struct _sthread *t = expired_rq->fila[i].head;
+        while (t) {
+            printf(" %d,%d", t->tid, t->quantum);
+            t = t->next;
+        }
+        printf("\n");
+    }
+
+    // Lista de bloqueadas (sleep_thr_list + threads em monitores)
+    printf("blocked list\n");
+
+    // Lista de espera por "sleep"
+    queue_element_t *qe = sleep_thr_list->first;
+    while (qe) {
+        printf("%d,%d ", qe->thread->tid, qe->thread->quantum);
+        qe = qe->next;
+    }
+
+    // (Opcional) Lista de espera por monitor — se quiser manter um queue global
+    // para bloqueados por monitor, adicione aqui também
+
+    printf("\n=== dump end ===\n");
 }
+
+
+
+
 
 void sthread_user_exit(void *ret) {
   splx(HIGH);
@@ -264,7 +336,6 @@ void sthread_user_yield(void)
   sthread_switch(old_thr->saved_ctx, active_thr->saved_ctx);
   splx(LOW);
 }
-
 
 
 

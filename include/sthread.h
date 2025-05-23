@@ -37,7 +37,7 @@ void sthread_init();
  * be passed arg. The new thread does not necessarily execute immediatly
  * (as in, sthread_create shouldn't force a switch to the new thread).
  */
-sthread_t sthread_create(sthread_start_func_t start_routine, void *arg);
+sthread_t sthread_create(sthread_start_func_t start_routine, void *arg,int priority);
 
 /* Exit the calling thread with return value ret.
  * Note: In this version of simplethreads, there is no way

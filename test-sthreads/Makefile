@@ -1,4 +1,4 @@
-PROGRAMS = test-create test-mutex \
+PROGRAMS = test-create test-mutex supermercado \
 	01mutex01 02mutex02 03mutex03\
 	04mutex04 05monitor01 06monitor02\
 	07monitor03 08monitor04 09monitor05

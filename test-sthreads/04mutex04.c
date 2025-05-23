@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
 	printf("thread 1 do mutex\n");
 	sthread_mutex_lock(mutex);
 	printf("thread1 dentro do mutex\n");
-	if (sthread_create(thread_start, (void*)NULL) == NULL) {
+	if (sthread_create(thread_start, (void*)NULL,4) == NULL) {
 		printf("sthread_create falhou\n");
 		exit(1);
 	}

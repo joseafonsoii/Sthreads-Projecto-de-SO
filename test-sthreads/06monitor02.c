@@ -30,15 +30,16 @@ void print_inc(int id) {
 }
 
 int main(int argc, char **argv) {
-	int arg = 1;
+	int arg = 1,priority;
 	printf("Testing sthread_mutex_*, impl: %s\n",
 		   (sthread_get_impl() == STHREAD_PTHREAD_IMPL) ? "pthread" : "user");
 	
 	sthread_init();
 	
 	mon = sthread_monitor_init();
-	
-	if (sthread_create(thread_start, (void*)&arg) == NULL) {
+	printf("Enter a priority");
+	scanf("%d",&priority);
+	if (sthread_create(thread_start, (void*)&arg,priority) == NULL) {
 		printf("sthread_create failed\n");
 		exit(1);
 	}
