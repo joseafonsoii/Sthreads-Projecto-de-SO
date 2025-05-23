@@ -9,12 +9,11 @@ SUBDIRS = sthread_lib test-sthreads
 # ALUNO1/ALUNO2/ALUNO3 = indicar os numeros dos alunos
 #
 CAMPUS=
-CURSO=
+CURSO=Ciências Da Computação
 GRUPO=
-ALUNO1=
-ALUNO2=
-ALUNO3=
-
+ALUNO1=Eclenio Neto 
+ALUNO2=José António Afonso
+ALUNO3=Ima Da Silva Bongue Do Céu 
 
 all: build
 

@@ -47,6 +47,8 @@ test-mutex: test-mutex.o
 
 09monitor05: 09monitor05.o
 	$(CC) $(CFLAGS) ../sthread_lib/sthread_start.o -o 09monitor05 09monitor05.o $(LIBSTHREAD)
+supermercado: supermercado.o
+	$(CC) $(CFLAGS) ../sthread_lib/sthread_start.o -o supermercado supermercado.o $(LIBSTHREAD)
 
 
 .c.o:
