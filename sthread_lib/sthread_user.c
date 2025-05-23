@@ -14,12 +14,11 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <stdio.h>
-
 #include <sthread.h>
 #include <sthread_user.h>
 #include <sthread_ctx.h>
 #include <sthread_time_slice.h>
-#include <sthread_user.h>
+
 #include "queue.h"
 
 /*Definindo as constantes*/
@@ -173,6 +172,12 @@ sthread_t sthread_user_create(sthread_start_func_t start_routine, void *arg, int
     // Insere na runqueue ativa correspondente
     // (assumindo que active_rq já foi inicializado em sthread_user_init)
     insert_in_runquee(&active_rq->fila[priority], new_thread);
+  splx(HIGH);
+  new_thread->tid = tid_gen++;
+  queue_insert(exe_thr_list, new_thread);
+  splx(LOW);
+  return new_thread;
+
 
     return new_thread;
 }
@@ -675,5 +680,9 @@ void sthread_dummy_monitor_signal(sthread_mon_t mon)
 {
    printf("WARNING: pthreads do not include monitors!\n");
 }
+int sthread_get_tid(struct _sthread *thr) {
+    return thr->tid;
+}
+
 
 

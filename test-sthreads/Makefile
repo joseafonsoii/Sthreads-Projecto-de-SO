@@ -1,10 +1,10 @@
 PROGRAMS = test-create test-mutex supermercado \
-	01mutex01 02mutex02 03mutex03\
+	01mutex01 02mutex02 03mutex03 test_new_functions\
 	04mutex04 05monitor01 06monitor02\
 	07monitor03 08monitor04 09monitor05
 
 
-INCLUDES = -I. -I$(srcdir) -I../include -I ../include
+INCLUDES = -I. -I$(srcdir) -I../include -I ../include -I../sthread_lib
 COMPILE = $(CC) $(DEFS) $(INCLUDES) $(CFLAGS)
 CC = gcc
 CFLAGS = -g -O0 -Wall -m32
@@ -49,7 +49,8 @@ test-mutex: test-mutex.o
 	$(CC) $(CFLAGS) ../sthread_lib/sthread_start.o -o 09monitor05 09monitor05.o $(LIBSTHREAD)
 supermercado: supermercado.o
 	$(CC) $(CFLAGS) ../sthread_lib/sthread_start.o -o supermercado supermercado.o $(LIBSTHREAD)
-
+test_new_functions: test_new_functions.o
+	$(CC) $(CFLAGS) ../sthread_lib/sthread_start.o -o test_new_functions test_new_functions.o $(LIBSTHREAD)
 
 .c.o:
 	$(COMPILE) -c -o $@ $<

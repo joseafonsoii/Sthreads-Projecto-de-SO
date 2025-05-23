@@ -1,13 +1,10 @@
-/*
- * supermercado.c - Solução para o problema do Supermercado com múltiplas filas e monitores
- * Implementa dois funcionários, cada um com sua fila. Clientes escolhem a fila menor e são atendidos.
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <../include/sthread.h>
-#include "../sthread_lib/queue.h"
+#include <sthread.h>
+#include <sthread_user.h>   
+#include "queue.h"
+
 
 #define NUM_CLIENTES 10
 #define NUM_CAIXAS 2
@@ -18,6 +15,9 @@ sthread_mon_t monitor;
 // Filas e contadores
 int fila[NUM_CAIXAS] = {0};
 queue_t* espera[NUM_CAIXAS];
+
+int sthread_get_tid(struct _sthread *thr);/*Funcao getter*/
+
 
 // Retorna o índice da fila com menos clientes
 int escolher_fila() {
@@ -42,7 +42,10 @@ void *cliente(void *arg) {
     sthread_monitor_enter(monitor);
     minha_fila = escolher_fila();
     fila[minha_fila]++;
-    queue_insert(espera[minha_fila], sthread_self());
+
+    extern struct _sthread* active_thr;
+    queue_insert(espera[minha_fila], active_thr);
+
     printf("Cliente %d entrou na fila %d\n", id, minha_fila);
     sthread_monitor_wait(monitor); // Espera ser atendido
     sthread_monitor_exit(monitor);
@@ -50,6 +53,7 @@ void *cliente(void *arg) {
     SerAtendido(50 + id * 5);
 
     sthread_exit(NULL);
+    return NULL;
 }
 
 void *funcionario(void *arg) {
@@ -70,7 +74,7 @@ void *funcionario(void *arg) {
         if (alvo != -1) {
             struct _sthread *cliente = queue_remove(espera[alvo]);
             fila[alvo]--;
-            printf("Funcionario %d vai atender cliente da fila %d\n", id, alvo);
+            printf("Funcionario %d vai atender cliente %d da fila %d\n", id, sthread_get_tid(cliente), alvo);
             sthread_monitor_signal(monitor); // Desbloqueia o cliente
             sthread_monitor_exit(monitor);
             Atender(80);

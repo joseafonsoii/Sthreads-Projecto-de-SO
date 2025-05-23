@@ -19,14 +19,12 @@ int success = 0;
 
 int main(int argc, char **argv)
 {
-	int priority;
+	
 	printf("Testing sthread_create, impl: %s\n",
 		   (sthread_get_impl() == STHREAD_PTHREAD_IMPL) ? "pthread" : "user");
 	
 	sthread_init();
-    printf("Enter a priority");
-	scanf("%d",&priority);
-	if (sthread_create(thread_start, (void*)1,priority) == NULL) {
+	if (sthread_create(thread_start, (void*)1,5) == NULL) {
 		printf("sthread_create failed\n");
 		exit(-1);
 	}
